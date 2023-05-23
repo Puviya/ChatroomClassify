@@ -40,7 +40,7 @@ r = redis.Redis(host='localhost', port=6379, db=0)
 #     r.set('blah-blah-blahs', json.dumps(class_id))'''
 
 
-def insert_chat_content(class_id, chat_content, user_id, email,to_be_sent):
+def insert_chat_content(class_id, chat_content, user_id, email,to_be_sent,name):
     email = email.replace('%40', '@')
     present = r.get(class_id)
     present = json.loads(present.decode('utf-8'))
@@ -49,7 +49,8 @@ def insert_chat_content(class_id, chat_content, user_id, email,to_be_sent):
         'role': 'mentor' if email in present[0]['Mentor'] else 'student',
         'content': chat_content,
         'sent_by': email,
-        'time': time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        'uname':name,
+        'time': time.strftime("%I:%M%p", time.localtime()),
         "to_be_sent": to_be_sent,
     }
     chat_data = present[0]['chatContent']
@@ -79,7 +80,6 @@ def connect(sid, environ):
     role = queue_name.split('=')[3].split('&')[0]
     email = queue_name.split('=')[4].split('&')[0]
     email = email.replace('%40', '@')
-    print(email)
     print("connected", token)
     chatinfo=r.get(classID)
     chatinfo = json.loads(chatinfo.decode('utf-8'))
@@ -119,12 +119,12 @@ def connect(sid, environ):
                     options.append(key)
         response['chats']=chats
         response['options']=options
-        sio.emit('connect',response,to=sid)
+        #sio.emit('connect',response,to=sid)
     elif role == "ment":
         for x in chat_content:
             if x['role'] == 'mentor' and x['sent_by'] == email:
                 chats.append(x)
-            elif x['role'] == 'student' and (x['to_be_sent'] == 'All hosts' or x['to_be_sent'] == email):
+            elif x['role'] == 'student' and (x['to_be_sent'] =='All hosts' or x['to_be_sent'] == email):
                 chats.append(x)
         options=[]
         for s in chatinfo[0]['studentSid']:
@@ -132,7 +132,7 @@ def connect(sid, environ):
                 options.append(key)
         response['chats']=chats
         response['options']=options
-        sio.emit('connect',response,to=sid)
+    sio.emit('connect',response,to=sid)
 
 
 @sio.on('disconnect')
@@ -143,7 +143,7 @@ def disconnect(sid):
 @sio.on('chat')
 def chat(sid, data):
     #insert the content into the classroom chat
-    insert_chat_content(data['classID'], data['chatContent'], data["userID"], data["email"], data['to_be_sent'])
+    insert_chat_content(data['classID'], data['chatContent'], data["userID"], data["email"], data['toBeSent'],data['name'])
     chats=[]
     chat_content = get_chat_content(data['classID'])
     chatinfo=r.get(data["classID"])
@@ -156,7 +156,7 @@ def chat(sid, data):
                 chats.append(x)
             elif x['role'] == 'mentor' and (x['to_be_sent'] == 'Everyone' or x['to_be_sent'] == data["email"]):
                 chats.append(x)
-        if data["to_be_sent"]=="All hosts":
+        if data["toBeSent"]=="All hosts":
             #check for all the connected hosts
             for s in chatinfo[0]['mentorSid']:
                 #for each connected host get their messages and send to them
@@ -172,7 +172,7 @@ def chat(sid, data):
             #check to be sent for particular host mail
             for s in chatinfo[0]['mentorSid']:
                 for mail,id in s.items():
-                    if mail==data["to_be_sent"]:
+                    if mail==data["toBeSent"]:
                         chatm=[]
                         for x in chat_content:
                             if x['role'] == 'mentor' and x['sent_by'] == mail:
@@ -188,7 +188,7 @@ def chat(sid, data):
                 chats.append(x)
             elif x['role'] == 'student' and (x['to_be_sent'] == 'All hosts' or x['to_be_sent'] == data["email"]):
                 chats.append(x)
-        if data["to_be_sent"]=="Everyone":
+        if data["toBeSent"]=="Everyone":
             for s in chatinfo[0]['studentSid']:
                 for mail,id in s.items():
                     chatm=[]
@@ -202,7 +202,7 @@ def chat(sid, data):
             #check check to be sent for particular student mail
             for s in chatinfo[0]['studentSid']:
                 for mail,id in s.items():
-                    if mail==data["to_be_sent"]:
+                    if mail==data["toBeSent"]:
                         chatm=[]
                         for x in chat_content:
                             if x['role'] == 'student' and x['sent_by'] == mail:
