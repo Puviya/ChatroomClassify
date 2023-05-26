@@ -7,39 +7,6 @@ import time
 
 r = redis.Redis(host='localhost', port=6379, db=0)
 
-
-'''try:
-#     class_id = r.get('class_id').decode('utf-8')
-# except Exception as e:
-#     print("class_id not found", e)
-#     class_id = [{
-#         'id': 'blah-blah-blahs',
-#         "class_name": "blah-blah-blah",
-#         "chatContent": [
-#             {
-#                 "role": "mentor",
-#                 "content": "Hello, I am your class assisten. How can I help you?",
-#                 "to_be_sent": "All",
-#                 "time": "2021-05-01 12:00:00",
-#             },
-#             {
-#                 "role": "student",
-#                 "content": "Hello",
-#                 "to_be_sent": "praveensm890@gmail.com",
-#                 "time": "2021-05-01 12:01:00"
-#             }
-#         ],
-#         "Mentor": [
-#             "praveensm890@gmail.com"
-#         ],
-#         "Students": [
-#             "praveen@guvi.in"
-#         ]
-#     }
-#     ]
-#     r.set('blah-blah-blahs', json.dumps(class_id))'''
-
-
 def insert_chat_content(class_id, chat_content, user_id, email,to_be_sent,name):
     email = email.replace('%40', '@')
     present = r.get(class_id)
@@ -102,23 +69,12 @@ def connect(sid, environ):
     r.set(classID,json.dumps(chatinfo))
     chat_content = get_chat_content(classID)
     chats = []
-    response={}
     if role == "stud":
         for x in chat_content:
             if x['role'] == 'student' and x['sent_by'] == email:
                 chats.append(x)
             elif x['role'] == 'mentor' and (x['to_be_sent'] == 'Everyone' or x['to_be_sent'] == email):
                 chats.append(x)
-        hostsid=[]
-        options=[]
-        hostsid.append(sid)
-        if chatinfo[0]['mentorSid']:
-            for s in chatinfo[0]['mentorSid']:
-                for key,value in s.items():
-                    hostsid.append(value)
-                    options.append(key)
-        response['chats']=chats
-        response['options']=options
         #sio.emit('connect',response,to=sid)
     elif role == "ment":
         for x in chat_content:
@@ -126,19 +82,31 @@ def connect(sid, environ):
                 chats.append(x)
             elif x['role'] == 'student' and (x['to_be_sent'] =='All hosts' or x['to_be_sent'] == email):
                 chats.append(x)
-        options=[]
-        for s in chatinfo[0]['studentSid']:
-            for key,value in s.items():
-                options.append(key)
-        response['chats']=chats
-        response['options']=options
-    sio.emit('connect',response,to=sid)
+    sio.emit('connect',chats,to=sid)
 
 
 @sio.on('disconnect')
 def disconnect(sid):
     print('Client disconnected:', sid)
 
+@sio.on('getcontents')
+def getcontents(sid,data):
+    chat_content = get_chat_content(data['classID'])
+    chats = []
+    if data['role'] == "stud":
+        for x in chat_content:
+            if x['role'] == 'student' and x['sent_by'] == data['email']:
+                chats.append(x)
+            elif x['role'] == 'mentor' and (x['to_be_sent'] == 'Everyone' or x['to_be_sent'] == data['email']):
+                chats.append(x)
+        #sio.emit('connect',response,to=sid)
+    elif data['role'] == "ment":
+        for x in chat_content:
+            if x['role'] == 'mentor' and x['sent_by'] == data['email']:
+                chats.append(x)
+            elif x['role'] == 'student' and (x['to_be_sent'] =='All hosts' or x['to_be_sent'] == data['email']):
+                chats.append(x)
+    sio.emit('getcontents',chats,to=sid)
 
 @sio.on('chat')
 def chat(sid, data):
