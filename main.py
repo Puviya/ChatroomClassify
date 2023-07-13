@@ -57,6 +57,7 @@ def connect(sid, environ):
     print("connected", token)
     chatinfo=r.get(classID)
     chatinfo = json.loads(chatinfo.decode('utf-8'))
+    url= chatinfo[0]["src"]
     if (email in chatinfo[0]['Mentor']) or admin =='true':
         mentorSid={email:sid}
         for obj in chatinfo[0]["mentorSid"]:
@@ -90,7 +91,7 @@ def connect(sid, environ):
                 chats.append(x)
             elif x['role'] == 'student' and (x['to_be_sent'] =='All hosts' or x['to_be_sent'] == email):
                 chats.append(x)
-    sio.emit('connect',chats,to=sid)
+    sio.emit('connect',{"chats":chats,"url":url},to=sid)
 
 
 @sio.on('disconnect')
@@ -115,7 +116,23 @@ def getcontents(sid,data):
             elif x['role'] == 'student' and (x['to_be_sent'] =='All hosts' or x['to_be_sent'] == data['email']):
                 chats.append(x)
     sio.emit('getcontents',chats,to=sid)
-
+@sio.on('switch')
+def switch(sid,data):
+    print(data)
+    chatinfo=r.get(data['classid'])
+    chatinfo = json.loads(chatinfo.decode('utf-8'))
+    print(chatinfo[0]['mentorSid'])
+    room =[]
+    for obj in chatinfo[0]['mentorSid']:
+        for j in obj.values():
+            room.append(j)
+    for obj in chatinfo[0]['studentSid']:
+        for j in obj.values():
+            room.append(j)
+    print(room)
+    chatinfo[0]['src']=data['url']
+    r.set(data['classid'],json.dumps(chatinfo))
+    sio.emit('switch',data['url'],to=room)
 @sio.on('chat')
 def chat(sid, data):
     #insert the content into the classroom chat
