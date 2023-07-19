@@ -119,6 +119,7 @@ def getcontents(sid,data):
 @sio.on('switch')
 def switch(sid,data):
     print(data)
+    print("***************************************")
     chatinfo=r.get(data['classid'])
     chatinfo = json.loads(chatinfo.decode('utf-8'))
     print(chatinfo[0]['mentorSid'])
@@ -132,6 +133,7 @@ def switch(sid,data):
     print(room)
     chatinfo[0]['src']=data['url']
     r.set(data['classid'],json.dumps(chatinfo))
+    print(chatinfo)
     sio.emit('switch',data['url'],to=room)
 @sio.on('chat')
 def chat(sid, data):
