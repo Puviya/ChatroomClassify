@@ -46,6 +46,7 @@ app = socketio.WSGIApp(sio)
 
 @sio.on('connect')
 def connect(sid, environ):
+    print("--------------------------------------------------------------------------")
     queue_name = environ['QUERY_STRING']
     token = queue_name.split('=')[1].split('&')[0]
     classID = queue_name.split('=')[2].split('&')[0]
@@ -53,11 +54,9 @@ def connect(sid, environ):
     email = queue_name.split('=')[4].split('&')[0]
     email = email.replace('%40', '@')
     admin = queue_name.split('=')[5].split('&')[0]
-    print(admin)
     print("connected", token)
     chatinfo=r.get(classID)
     chatinfo = json.loads(chatinfo.decode('utf-8'))
-    url= chatinfo[0]["src"]
     if (email in chatinfo[0]['Mentor']) or admin =='true':
         mentorSid={email:sid}
         for obj in chatinfo[0]["mentorSid"]:
@@ -91,7 +90,8 @@ def connect(sid, environ):
                 chats.append(x)
             elif x['role'] == 'student' and (x['to_be_sent'] =='All hosts' or x['to_be_sent'] == email):
                 chats.append(x)
-    sio.emit('connect',{"chats":chats,"url":url},to=sid)
+    print(chats)
+    sio.emit('connect',chats,to=sid)
 
 
 @sio.on('disconnect')
@@ -138,6 +138,7 @@ def switch(sid,data):
 @sio.on('chat')
 def chat(sid, data):
     #insert the content into the classroom chat
+    print("hhhhhhhhh")
     insert_chat_content(data['classID'], data['chatContent'], data["email"], data['toBeSent'],data['name'],data['isAdmin'])
     chats=[]
     chat_content = get_chat_content(data['classID'])
