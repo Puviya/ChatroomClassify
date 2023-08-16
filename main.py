@@ -208,6 +208,19 @@ def chat(sid, data):
                         sio.emit('chat',chatm,to=id)
         sio.emit('chat',chats,to=sid)
 
+@sio.on('banner')
+def banner(sid,data):
+    r.set('banner',data)
+    res=r.get('banner')
+    sio.emit('banner',res,to=sid)
+
+@sio.on('bannerGet')
+def bannerGet(sid):
+    res=r.get('banner')
+    val=''
+    val += res.decode('utf-8')  # Replace 'utf-8' with the appropriate encoding if needed
+    sio.emit('bannerGet',val,to=sid)
+
 if __name__ == '__main__':
     port = 8001
     print(f'Starting server on port {port}')
