@@ -253,9 +253,12 @@ def banner(sid,data):
 
 @sio.on('bannerGet')
 def bannerGet(sid):
+    if not r.exists('banner'):
+        # If the banner key doesn't exist, set it to 'enable'
+        r.set('banner', 'enable')
     res=r.get('banner')
     val=''
-    val += res.decode('utf-8')  # Replace 'utf-8' with the appropriate encoding if needed
+    val += res.decode('utf-8')
     sio.emit('bannerGet',val,to=sid)
 
 if __name__ == '__main__':
