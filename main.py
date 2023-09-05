@@ -29,7 +29,6 @@ def insert_chat_content(class_id, chat_content, email,to_be_sent,name,admin):
     # store the same data into mongo db here
     # if exception means note it and handle it
 
-
 def get_chat_content(class_id):
     present = r.get(class_id)
     # if it is not set in redis get it from mongodb
@@ -39,10 +38,8 @@ def get_chat_content(class_id):
     else:
         return present[0]['chatContent']
 
-
 sio = socketio.Server(cors_allowed_origins='*')
 app = socketio.WSGIApp(sio)
-
 
 @sio.on('connect')
 def connect(sid, environ):
@@ -93,7 +90,6 @@ def connect(sid, environ):
                     chats.append(x)
         print(chats)
         sio.emit('connect',chats,to=sid)
-
 
 @sio.on('disconnect')
 def disconnect(sid):
@@ -184,7 +180,7 @@ def chat(sid, data):
         print("ment")
         print(chat_content)
         for x in chat_content:
-            if x['role'] == 'mentor' and x['sent_by'] == data["email"]:
+            if x['role'] == 'mentor' and (x['sent_by'] == data["email"] or x['to_be_sent'] == data["email"] or x['to_be_sent'] == 'Everyone'):
                 chats.append(x)
             elif x['role'] == 'student' and (x['to_be_sent'] == 'All hosts' or x['to_be_sent'] == data["email"]):
                 chats.append(x)
@@ -253,6 +249,9 @@ def banner(sid,data):
 
 @sio.on('bannerGet')
 def bannerGet(sid):
+    if not r.exists('banner'):
+        # If the banner key doesn't exist, set it to 'enable'
+        r.set('banner', 'enable')
     res=r.get('banner')
     val=''
     val += res.decode('utf-8')  # Replace 'utf-8' with the appropriate encoding if needed
