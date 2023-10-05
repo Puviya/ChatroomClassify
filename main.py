@@ -256,7 +256,14 @@ def bannerGet(sid):
     val=''
     val += res.decode('utf-8')  # Replace 'utf-8' with the appropriate encoding if needed
     sio.emit('bannerGet',val,to=sid)
-
+@sio.on('alertModal')
+def AlertMessage(sid,data):
+    print("inga emit aaguhdu")
+    print(data)
+    if data['for'] == 'switchalert':
+        sio.emit('alertSwitch',to=sid)
+    elif data['for'] == 'endalert':
+        sio.emit('alertEnd',to=sid)
 if __name__ == '__main__':
     port = 8001
     print(f'Starting server on port {port}')
