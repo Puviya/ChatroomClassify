@@ -55,6 +55,10 @@ def connect(sid, environ):
     chatinfo=r.get(classID)
     if chatinfo != None:
         chatinfo = json.loads(chatinfo.decode('utf-8'))
+        if 'src' in chatinfo[0]:
+            url = chatinfo[0]['src']
+        else:
+            url = 'https://live-hls-x6fa.livepush.io/live_cdn/emidfhudvb/index.m3u8'
         if (email in chatinfo[0]['Mentor']) or admin =='true':
             mentorSid={email:sid}
             for obj in chatinfo[0]["mentorSid"]:
@@ -89,7 +93,7 @@ def connect(sid, environ):
                 elif x['role'] == 'student' and (x['to_be_sent'] =='All hosts' or x['to_be_sent'] == email or x['to_be_sent'] == 'Everyone'):
                     chats.append(x)
         print(chats)
-        sio.emit('connect',chats,to=sid)
+        sio.emit('connect',{"chats":chats,"url":url},to=sid)
 
 @sio.on('disconnect')
 def disconnect(sid):
