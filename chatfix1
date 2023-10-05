@@ -104,10 +104,7 @@ def disconnect(sid):
 
 @sio.on('getcontents')
 def getcontents(sid,data):
-    print("=============================class id in get contents : ",data['classID'])
     chat_content = get_chat_content(data['classID'])
-    print("dsab-----------------------------------------------------------")
-    print("*/-----------------------c",chat_content)
     chats = []
     if data['role'] == "stud":
         for x in chat_content:
@@ -190,12 +187,11 @@ def chat(sid, data):
         print("ment")
         print(chat_content)
         for x in chat_content:
-            if x['role'] == 'mentor' and (x['sent_by'] == data["email"] or x['to_be_sent']=="Everyone" or x['to_be_sent']==data["email"]) :
+            if x['role'] == 'mentor' and x['sent_by'] == data["email"]:
                 chats.append(x)
             elif x['role'] == 'student' and (x['to_be_sent'] == 'All hosts' or x['to_be_sent'] == data["email"]):
                 chats.append(x)
         if data["toBeSent"]=="Everyone":
-            print("======metor id :",chatinfo[0]['mentorSid'])
             for s in chatinfo[0]['studentSid']:
                 for mail,id in s.items():
                     chatm=[]
