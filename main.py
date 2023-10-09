@@ -21,7 +21,6 @@ def insert_chat_content(class_id, chat_content, email,to_be_sent,name,admin):
         'time': time.strftime("%I:%M%p", time.gmtime()),
         "to_be_sent": to_be_sent,
     }
-    print(obj)
     chat_data = present[0]['chatContent']
     chat_data.append(obj)
     present[0]['chatContent'] = chat_data
@@ -43,7 +42,6 @@ app = socketio.WSGIApp(sio)
 
 @sio.on('connect')
 def connect(sid, environ):
-    print("--------------------------------------------------------------------------")
     queue_name = environ['QUERY_STRING']
     token = queue_name.split('=')[1].split('&')[0]
     classID = queue_name.split('=')[2].split('&')[0]
@@ -52,48 +50,48 @@ def connect(sid, environ):
     email = email.replace('%40', '@')
     admin = queue_name.split('=')[5].split('&')[0]
     print("connected", token)
-    chatinfo=r.get(classID)
-    if chatinfo != None:
-        chatinfo = json.loads(chatinfo.decode('utf-8'))
-        if 'src' in chatinfo[0]:
-            url = chatinfo[0]['src']
-        else:
-            url = 'https://live-hls-x6fa.livepush.io/live_cdn/emidfhudvb/index.m3u8'
-        if (email in chatinfo[0]['Mentor']) or admin =='true':
-            mentorSid={email:sid}
-            for obj in chatinfo[0]["mentorSid"]:
-                if email in obj:
-                    obj[email]=sid
-                    break
+    if(classID!='' and r.exists(classID)) :
+        chatinfo=r.get(classID)
+        if chatinfo != None:
+            chatinfo = json.loads(chatinfo.decode('utf-8'))
+            if 'src' in chatinfo[0]:
+                url = chatinfo[0]['src']
             else:
-                chatinfo[0]["mentorSid"].append(mentorSid)
-        elif email in chatinfo[0]['Students']:
-            studentSid={email:sid}
-            for obj in chatinfo[0]["studentSid"]:
-                if email in obj:
-                    obj[email]=sid
-                    break
-            else:
-                chatinfo[0]["studentSid"].append(studentSid)
-        r.set(classID,json.dumps(chatinfo))
-        # update the same to mongodb
-        chat_content = get_chat_content(classID)
-        chats = []
-        if role == "stud":
-            for x in chat_content:
-                if x['role'] == 'student' and x['sent_by'] == email:
-                    chats.append(x)
-                elif x['role'] == 'mentor' and (x['to_be_sent'] == 'Everyone' or x['to_be_sent'] == email):
-                    chats.append(x)
-            #sio.emit('connect',response,to=sid)
-        elif role == "ment":
-            for x in chat_content:
-                if x['role'] == 'mentor' and (x['sent_by'] == email or x['to_be_sent'] == email or x['to_be_sent'] == 'Everyone'):
-                    chats.append(x)
-                elif x['role'] == 'student' and (x['to_be_sent'] =='All hosts' or x['to_be_sent'] == email or x['to_be_sent'] == 'Everyone'):
-                    chats.append(x)
-        print(chats)
-        sio.emit('connect',{"chats":chats,"url":url},to=sid)
+                url = 'https://live-hls-x6fa.livepush.io/live_cdn/emidfhudvb/index.m3u8'
+            if (email in chatinfo[0]['Mentor']) or admin =='true':
+                mentorSid={email:sid}
+                for obj in chatinfo[0]["mentorSid"]:
+                    if email in obj:
+                        obj[email]=sid
+                        break
+                else:
+                    chatinfo[0]["mentorSid"].append(mentorSid)
+            elif email in chatinfo[0]['Students']:
+                studentSid={email:sid}
+                for obj in chatinfo[0]["studentSid"]:
+                    if email in obj:
+                        obj[email]=sid
+                        break
+                else:
+                    chatinfo[0]["studentSid"].append(studentSid)
+            r.set(classID,json.dumps(chatinfo))
+            # update the same to mongodb
+            chat_content = get_chat_content(classID)
+            chats = []
+            if role == "stud":
+                for x in chat_content:
+                    if x['role'] == 'student' and x['sent_by'] == email:
+                        chats.append(x)
+                    elif x['role'] == 'mentor' and (x['to_be_sent'] == 'Everyone' or x['to_be_sent'] == email):
+                        chats.append(x)
+                #sio.emit('connect',response,to=sid)
+            elif role == "ment":
+                for x in chat_content:
+                    if x['role'] == 'mentor' and (x['sent_by'] == email or x['to_be_sent'] == email or x['to_be_sent'] == 'Everyone'):
+                        chats.append(x)
+                    elif x['role'] == 'student' and (x['to_be_sent'] =='All hosts' or x['to_be_sent'] == email or x['to_be_sent'] == 'Everyone'):
+                        chats.append(x)
+            sio.emit('connect',{"chats":chats,"url":url},to=sid)
 
 @sio.on('disconnect')
 def disconnect(sid):
@@ -119,11 +117,8 @@ def getcontents(sid,data):
     sio.emit('getcontents',chats,to=sid)
 @sio.on('switch')
 def switch(sid,data):
-    print(data)
-    print("***************************************")
     chatinfo=r.get(data['classid'])
     chatinfo = json.loads(chatinfo.decode('utf-8'))
-    print(chatinfo[0]['mentorSid'])
     room =[]
     for obj in chatinfo[0]['mentorSid']:
         for j in obj.values():
@@ -131,16 +126,12 @@ def switch(sid,data):
     for obj in chatinfo[0]['studentSid']:
         for j in obj.values():
             room.append(j)
-    print(room)
     chatinfo[0]['src']=data['url']
     r.set(data['classid'],json.dumps(chatinfo))
-    print(chatinfo)
     sio.emit('switch',data['url'],to=room)
 @sio.on('chat')
 def chat(sid, data):
     #insert the content into the classroom chat
-    print("hhhhhhhhh")
-    print(data)
     insert_chat_content(data['classID'], data['chatContent'], data["email"], data['toBeSent'],data['name'],data['isAdmin'])
     chats=[]
     chat_content = get_chat_content(data['classID'])
@@ -181,8 +172,6 @@ def chat(sid, data):
         #send the student message to him
         sio.emit('chat',chats,to=sid)
     elif data['role'] == 'ment':
-        print("ment")
-        print(chat_content)
         for x in chat_content:
             if x['role'] == 'mentor' and (x['sent_by'] == data["email"] or x['to_be_sent'] == data["email"] or x['to_be_sent'] == 'Everyone'):
                 chats.append(x)
@@ -233,7 +222,6 @@ def chat(sid, data):
         sio.emit('chat',chats,to=sid)
 @sio.on('meetEnded')
 def meetEnded(sid,data):
-    print(data)
     chatinfo=r.get(data["classid"])
     chatinfo = json.loads(chatinfo.decode('utf-8'))
     room =[]
@@ -258,16 +246,14 @@ def bannerGet(sid):
         r.set('banner', 'enable')
     res=r.get('banner')
     val=''
-    val += res.decode('utf-8')  # Replace 'utf-8' with the appropriate encoding if needed
+    val += res.decode('utf-8')
     sio.emit('bannerGet',val,to=sid)
 @sio.on('alertModal')
 def AlertMessage(sid,data):
-    print("inga emit aaguhdu")
-    print(data)
     if data['for'] == 'switchalert':
-        sio.emit('alertSwitch',to=sid)
+        sio.emit('alertSwitch',data['time'],to=sid)
     elif data['for'] == 'endalert':
-        sio.emit('alertEnd',to=sid)
+        sio.emit('alertEnd',data['time'],to=sid)
 if __name__ == '__main__':
     port = 8001
     print(f'Starting server on port {port}')
