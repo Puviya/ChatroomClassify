@@ -254,6 +254,9 @@ def AlertMessage(sid,data):
         sio.emit('alertSwitch',data['time'],to=sid)
     elif data['for'] == 'endalert':
         sio.emit('alertEnd',data['time'],to=sid)
+@sio.on('dropDown')
+def AddDropDown(sid,data):
+    sio.emit('updateDropdown',data)
 if __name__ == '__main__':
     port = 8001
     print(f'Starting server on port {port}')
